@@ -117,11 +117,14 @@ decl_module! {
 impl<T: Trait> SendXcm for Module<T> {
 	fn send_xcm(dest: MultiLocation, msg: Xcm) -> Result<(), ()> {
 		let msg: VersionedXcm = msg.into();
+		println!("Sending XCM: {:?}, {:?}", dest, msg);
 		match dest.split_last() {
 			(MultiLocation::Null, None) => {
+				println!("Match: NULL");
 				T::XcmExecutor::execute_xcm(MultiLocation::Null, msg.try_into().map_err(|_| ())?)
 			}
 			(MultiLocation::Null, Some(Junction::Parent)) => {
+				println!("Match: X1(Parent)");
 				//TODO: check fee schedule
 				let data = msg.encode();
 				let hash = T::Hashing::hash(&data);
@@ -131,11 +134,13 @@ impl<T: Trait> SendXcm for Module<T> {
 
 				Ok(())
 			}
-			(relayer, Some(Junction::Parachain { id })) =>
+			(relayer, Some(Junction::Parachain { id })) => {
+				println!("Match: Parachain({:?})", id);
 				Self::send_xcm(
 					relayer,
 					Xcm::RelayToParachain { id: id.into(), inner: Box::new(msg) }.into()
-				),
+				)
+			},
 			_ => Err(())?,
 		}
 	}
